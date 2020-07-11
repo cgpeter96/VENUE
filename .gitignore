@@ -2,6 +2,7 @@
 images/
 logs/
 *.jpg
+tmp/
 
 # Byte-compiled / optimized / DLL files
 
