@@ -85,6 +85,8 @@ class WeightedTripletLoss(nn.Module):
         assert len(feats)==2
         images,tags = feats
         pairwise_dist = self.cal_distance(tags,images)
+        if True:
+            pairwise_dist = torch.exp(pairwise_dist)
         if self.use_hardest:
             return self.hard_triplet_loss(pairwise_dist,labels)
         else:
@@ -163,6 +165,25 @@ class TripletLoss(nn.Module):
             loss_values,_ = triplet_loss_module.batch_all_triplet_loss(labels,feats,self.margin,False,self.device)
 
         return loss_values
+
+class ExpTripletLoss(nn.Module):
+    def __init__(self,use_hardest=False,
+                      margin=1.0,
+                      device='cpu'):
+        super().__init__()
+        self.margin=margin
+        self.device=torch.device(device)
+        self.use_hardest=use_hardest
+        
+
+    def forward(self,feats,labels):
+        if self.use_hardest:
+            loss_values = triplet_loss_module.exp_batch_hard_triplet_loss(labels,feats,self.margin,False, self.device,"eud")
+        else:
+            loss_values,_ = triplet_loss_module.batch_all_triplet_loss(labels,feats,self.margin,False,self.device)
+
+        return loss_values
+
 if __name__ == '__main__':
     # loss_fn = WeightedTripletLoss(True)
     loss_fn = TripletLoss(use_hardest=True,margin=1.0)

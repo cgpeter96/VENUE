@@ -30,6 +30,10 @@ def batch_hard_triplet_loss(labels, embeddings, margin, squared=False, device='c
         # print(pairwise_dist.shape)qq
     else:
         raise Exception("dist type error")
+
+    # apply exp
+
+
     # print(pairwise_dist)
     # For each anchor, get the hardest positive
     # First, we need to get a mask for every valid positive (they should have same label)
@@ -64,6 +68,69 @@ def batch_hard_triplet_loss(labels, embeddings, margin, squared=False, device='c
     triplet_loss = tl.mean()
 
     return triplet_loss
+
+def exp_batch_hard_triplet_loss(labels, embeddings, margin, squared=False, device='cpu',dist_type='eud'):
+    """Build the triplet loss over a batch of embeddings.(在一个batch 中labels 应该是有相同的 )
+
+    For each anchor, we get the hardest positive and hardest negative to form a triplet.
+
+    Args:
+        labels: labels of the batch, of size (batch_size,)
+        embeddings: tensor of shape (batch_size, embed_dim)
+        margin: margin for triplet loss
+        squared: Boolean. If true, output is the pairwise squared euclidean distance matrix.
+                 If false, output is the pairwise euclidean distance matrix.
+
+    Returns:
+        triplet_loss: scalar tensor containing the triplet loss
+    """
+    # Get the pairwise distance matrix
+    if dist_type=='eud':
+
+        pairwise_dist = _pairwise_distances(embeddings, squared=squared)
+        # print(pairwise_dist.shape)
+    elif dist_type=='kl':
+        pairwise_dist = _KL_distance(embeddings)
+        # print(pairwise_dist.shape)qq
+    else:
+        raise Exception("dist type error")
+    # print(pairwise_dist)
+    pairwise_dist = torch.exp(pairwise_dist)
+    # For each anchor, get the hardest positive
+    # First, we need to get a mask for every valid positive (they should have same label)
+    mask_anchor_positive = _get_anchor_positive_triplet_mask(
+        labels, device).float()
+
+    # print(mask_anchor_positive)
+    # We put to 0 any element where (a, p) is not valid (valid if a != p and label(a) == label(p))
+    anchor_positive_dist = mask_anchor_positive * pairwise_dist
+
+    # shape (batch_size, 1)
+    hardest_positive_dist, _ = anchor_positive_dist.max(1, keepdim=True)
+
+    # For each anchor, get the hardest negative
+    # First, we need to get a mask for every valid negative (they should have different labels)
+    mask_anchor_negative = _get_anchor_negative_triplet_mask(labels).float()
+
+    # We add the maximum value in each row to the invalid negatives (label(a) == label(n))
+    max_anchor_negative_dist, _ = pairwise_dist.max(1, keepdim=True)
+    anchor_negative_dist = pairwise_dist + \
+        max_anchor_negative_dist * (1.0 - mask_anchor_negative)
+
+    # shape (batch_size,)
+    hardest_negative_dist, _ = anchor_negative_dist.min(1, keepdim=True)
+
+    # Combine biggest d(a, p) and smallest d(a, n) into final triplet loss
+    tl = hardest_positive_dist - hardest_negative_dist + margin
+    # print("NEG:",hardest_negative_dist)
+    # print("POS",hardest_positive_dist)
+    # tl[tl < 0] = 0
+    tl = torch.clamp(tl,0)
+    triplet_loss = tl.mean()
+
+    return triplet_loss
+
+
 
 def batch_hard_multi_loss(labels, embeddings, margin, squared=False, device='cpu',dist_type='eud',alpha=0.5):
     """Build the triplet loss over a batch of embeddings.(在一个batch 中labels 应该是有相同的 )

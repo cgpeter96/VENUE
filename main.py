@@ -20,7 +20,7 @@ from tensorboardX import SummaryWriter
 from networks.models import TrimSyn
 from networks.layers import check_tensor
 from networks.radam import RAdam, PlainRAdam, AdamW
-from networks.losses import WeightedTripletLoss,TripletLoss
+from networks.losses import WeightedTripletLoss,TripletLoss,ExpTripletLoss
 
 
 
@@ -303,8 +303,10 @@ def main():
     optimizer = RAdam(model.parameters(), lr=args.lr,weight_decay=0.1)
     # optimizer = Adam(model.parameters(), lr=args.lr,weight_decay=0.1)
     loss_function = WeightedTripletLoss(use_hardest=True,weighted_factor=0.4,margin=1.0,device="cuda")
-    # loss_function = TripletLoss(use_hardest=True,margin=1.0,device="cuda").to('cuda')
+    #loss_function = TripletLoss(use_hardest=True,margin=1.0,device="cuda").to('cuda')
+    #loss_function = ExpTripletLoss(use_hardest=True,margin=1.0,device="cuda").to('cuda')
     
+
     if args.resume_path:
         model.load_model(args.resume_path)
     if args.test_mode =="true":
