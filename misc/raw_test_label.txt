@@ -1,0 +1,209 @@
+blessed_virgin_mary	mary	mother_mary	our_lady	saint_mary	virgin_mary
+col	gap	mountain_pass	notch	pass	saddle
+auto_accident	automobile_accident	car_accident	car_crash	road_accident	traffic_accident
+world_wide_wrestling_federation	world_wrestling_entertainment	world_wrestling_federation	wwe	wwwf
+light	natural_lighting	natural_light	solar_radiation	sunlight	sunshine
+harry_s_truman	harry_truman	president_harry_truman	president_truman	truman
+gaeilge	irish_gaelic	irish_language
+london_st_pancras	st_pancras_international	st_pancras_railway_station	st_pancras_station	st_pancras
+fdr	franklin_delano_roosevelt	franklin_roosevelt	president_franklin_delano_roosevelt	president_roosevelt
+elizabeth_ii	princess_elizabeth	queen_elizabeth_ii	the_queen
+the_second_world_war	world_war_2	world_war_ii	ww2	wwii
+metric_tonnes	metric_tonne	metric_ton	tonnes	tonne
+bleeding	blood_loss	haemorrhage	hemorrhage	hemorrhaging
+2pac	makaveli	pac	tupac_shakur	tupac
+dostoevsky	dostoyevsky	fyodor_dostoevsky	fyodor_dostoyevsky
+correctional_facility	jail	penitentiary	prison
+voice_actor	voice_actress	voice_artist	voice_talent
+alien_life	aliens	extraterrestrial_life	space_aliens
+cargo_aircraft	cargo	freighter	transport
+english_premier_league	fa_premier_league	premier_league	premiership
+cane_sugar	sucrose	sugar	table_sugar
+farsi	parsi	persian_language	persian
+liters	liter	litres	litre
+calumny	defamation	libel	slander
+chairman	chairperson	chairwoman
+southwest_asia	southwestern_asia	west_asia	western_asia
+horror_film	horror_movies	horror_movie	horror
+california_state_route_1	highway_1	pacific_coast_highway	pch
+akkadian_language	akkadian	assyrian
+capital_punishment	death_penalty	death_sentence	execution
+darth_sidious	emperor_palpatine	palpatine	the_emperor
+cacao	cocoa_powder	cocoa_solids	cocoa
+bone_fractures	broken_bone	fractures	fracture
+bloom	blossom	flowers	flower
+latter-day_saints	lds_church	lds	mormons
+african_american	afro-american	black_american
+actor	actress	film_actor	film_actress
+mandarin_chinese	mandarin	putonghua	standard_chinese
+british_open	open_championship	the_open_championship	the_open
+freemasonry	freemasons	freemason	masonic
+brain_haemorrhage	brain_hemorrhage	cerebral_haemorrhage	cerebral_hemorrhage
+cougar	mountain_lion	panther	puma
+esoteric_buddhism	tantric_buddhism	vajrayana_buddhism	vajrayana
+lord_voldemort	tom_marvolo_riddle	tom_riddle	voldemort
+bible	christian_bible	holy_bible	the_bible
+baby	infant	neonate	newborn
+streetcar	tram	trolley_car	trolley
+cereal_grain	cereal	grains	grain
+brooklyn_nets	nets	new_jersey_nets	new_york_nets
+double_bass	string_bass	upright_bass
+norse	old_icelandic	old_norse_language	old_norse
+brothers_grimm	grimm_brothers	the_brothers_grimm
+chips	french_fries	fries
+sitcoms	sitcom	situation_comedy
+bicycling	biking	cycling
+telecommunications	telecommunication	telecom
+sas	scandinavian_airlines_system	scandinavian_airlines
+polytetrafluoroethylene	ptfe	teflon
+businessman	businessperson	businesswoman
+14th_dalai_lama	dalai_lama	tenzin_gyatso
+daoism	taoism	taoist
+television_producer	tv_producer
+chairman_mao	mao_tse-tung	mao_zedong
+cat_family	cats	felidae
+his_royal_highness	hrh	royal_highness
+disney	the_walt_disney_company	walt_disney_productions
+als	amyotrophic_lateral_sclerosis	motor_neurone_disease
+belsen	bergen-belsen_concentration_camp	bergen-belsen
+great_khan	khaganate	khagan
+chromium	cr
+n64	nintendo_64	ultra_64
+canadian_pacific_railway	cp_rail	cpr
+molluscs	mollusks	mollusk
+dangerous_goods	hazardous_material	hazmat
+barack_obama	obama	president_obama
+japan	nihon	nippon
+christ	jesus_christ	jesus
+boadicea	boudica	boudicca
+un_general_assembly	unga	united_nations_general_assembly
+camp	cyclic_adenosine_monophosphate	cyclic_amp
+brimstone	sulfur	sulphur
+national_socialism	nazism	nazi
+national_cartoonist_society	national_cartoonists_society	reuben_award
+gautama_buddha	shakyamuni
+helena	saint_helena	saint_helen
+mounties	rcmp	royal_canadian_mounted_police
+general_motors_corporation	general_motors	gm
+halacha	halakhah	halakha
+alfred_lord_tennyson	alfred_tennyson	tennyson
+sdrs	sdr	special_drawing_rights
+bitrate	data_rate	data_transfer_rate
+berkeley	cal	uc_berkeley
+leningrad	petrograd	saint_petersburg
+mark_twain	samuel_clemens	twain
+dec	digital_equipment_corporation	digital
+fee	fiefdom	fief
+auguste_renoir	pierre-auguste_renoir	renoir
+ebola_virus_disease	ebola_virus	ebola
+anatolian_plateau	anatolia	asia_minor
+bovine_spongiform_encephalopathy	bse	mad_cow_disease
+racial_discrimination	racial_inequality	racism
+hillary_clinton	hillary	senator_hillary_clinton
+lenin	vladimir_ilyich_lenin	vladimir_lenin
+independent_music	indie_music	indie
+eugenio_pacelli	pius_xii	pope_pius_xii
+alhacen	alhazen	ibn_al-haytham
+tuvaluan_language	tuvaluan
+british_national_anthem	god_save_the_queen	national_anthem
+application_software	application	app
+crime_fiction	crime_film	crime
+atmospheres	atmosphere	atm
+conservatoire_de_paris	paris_conservatoire	paris_conservatory
+jackie_kennedy	jacqueline_kennedy_onassis	jacqueline_kennedy
+maluku_islands	moluccas	spice_islands
+hainan_island	hainan_province	hainan
+sierra_entertainment	sierra_on-line	sierra
+laughing_gas	nitrous_oxide	nitrous
+heracles	herakles	hercules
+fat_tuesday	pancake_day	shrove_tuesday
+gulf_war	operation_desert_storm	persian_gulf_war
+bill_clinton	president_bill_clinton	president_clinton
+archbishop_desmond_tutu	desmond_tutu	tutu
+hurricane	tropical_cyclone	tropical_storm
+art_nouveau	jugendstil	modern_style
+bd	blu-ray_disc	blu-ray
+cardiovascular_diseases	cardiovascular_disease	heart_disease
+cell_phone	cellular_phone	mobile_phone
+new_york_penn_station	penn_station	pennsylvania_station
+material_science	materials_engineering	materials_science
+united_states_geological_survey	us_geological_survey	usgs
+emirates	uae	united_arab_emirates
+fl_oz	fluid_ounces	fluid_ounce
+sight	vision	visual_perception
+syxx-pac	syxx	x-pac
+chippewa	ojibway	ojibwe
+boston_americans	boston_red_sox	red_sox
+inauguration_day	inauguration	presidential_inauguration
+formal_logic	mathematical_logic	symbolic_logic
+ladybirds	ladybird	ladybugs
+female_circumcision	female_genital_cutting	female_genital_mutilation
+temporomandibular_joint_dysfunction	tmd	tmj
+adventism	adventists	adventist
+filling_station	gas_station	petrol_station
+nordic_languages	north_germanic_languages	scandinavian_languages
+dutch_language	dutch	nederlands
+rok	south_korea
+tetragrammaton	yahweh	yhwh
+napoleon_bonaparte	napoleon_i	napoleon
+bealltainn	bealtaine	beltane
+american_southwest	southwest_united_states	southwestern_united_states
+triacylglycerol	triglycerides	triglyceride
+excrement	faeces	feces
+photographs	photograph	photo
+united_states_forest_service	us_forest_service	usfs
+the_wall_street_journal	wall_street_journal	wsj
+christmas_day	christmas	xmas
+fata	federally_administered_tribal_areas	tribal_areas
+colonel_gaddafi	gaddafi	muammar_gaddafi
+thanksgiving_day	thanksgiving_dinner	thanksgiving
+scenic_design	set_design	stage_design
+everest	mount_everest	qomolangma
+african_people	africans	african
+james_frazer	james_george_frazer	sir_james_george_frazer
+green_berets	united_states_army_special_forces
+attorney	counsel	lawyer
+allegro	andante	tempo
+suburban_area	suburbia	suburb
+coconut_palm	coconut	cocos_nucifera
+oil_paints	oil_paint	oil
+congress	united_states_congress	us_congress
+martin_luther_king_jr.	martin_luther_king	mlk
+kilogramme	kilograms	kilogram
+dallas_mavericks	mavericks	mavs
+yangtze_river	yangtze	yangzi_river
+aves	birds
+bih	bosnia-herzegovina	bosnia
+quantum_mechanics	quantum_physics	quantum_theory
+jackson_5	jacksons	the_jackson_5
+doctor	medical_doctor	physician
+king_tut	tutankhamen	tutankhamun
+cavs	cleveland_cavaliers
+hebrew_language	hebrew	modern_hebrew
+late_show	the_late_show
+erythrocytes	rbcs	red_blood_cell
+edward_elgar	elgar	sir_edward_elgar
+cassava	manioc	yuca
+rolling_stones	the_rolling_stones	the_stones
+centre_georges_pompidou	centre_pompidou	pompidou_centre
+apple_macintosh	macintosh	mac
+castra	castrum	roman_fort
+made-for-tv_movie	television_film	tv_movie
+king	monarch	queen
+byzantine_empire	byzantium	eastern_roman_empire
+acrylic_glass	plexiglass	plexiglas
+eyeglasses	glasses	spectacles
+matzah	matza	matzo
+baltic_countries	baltic_states	baltics
+ceo	chief_executive_officer	chief_executive
+heterosexuality	heterosexual	straight
+new_jersey_transit	nj_transit	njt
+chinese_new_year	lunar_new_year	spring_festival
+west_indian	west_indies
+ddr	east_germany	german_democratic_republic
+islamic_scholar	ulama	ulema
+centimetres	centimetre	cm
+homo_sapiens	humans	human
+istari
+zen_buddhism	zen
+jimmy_carter	president_carter	president_jimmy_carter

@@ -17,7 +17,7 @@ from misc.utils import set_logger,AverageMeter,load_embedding,write_dict2vec
 from misc.evalution import evaluate_clustering,get_map
 from dataloader import rank_dataset
 from tensorboardX import SummaryWriter
-from networks.models import TrimSyn
+from networks.models import TrimSyn,SingleSyn
 from networks.layers import check_tensor
 from networks.radam import RAdam, PlainRAdam, AdamW
 from networks.losses import WeightedTripletLoss,TripletLoss,ExpTripletLoss
@@ -35,19 +35,24 @@ def train(epoch, model, optimizer, loss_function, data_loader, writer=None,datas
             label,text, visual = data
             visual = visual.view(visual.size(0),visual.size(1),visual.size(2))
             label,text, visual = check_tensor(label),check_tensor(text), check_tensor(visual)
-        elif dataset_output_mode=="text":
-            label,text = data
-            label,text = check_tensor(label),check_tensor(text)
-        else :
-            pass
-
-        optimizer.zero_grad()
-        if dataset_output_mode =="multimodal":
             output_feats = model.forward_instance(text, visual)
             loss_values = loss_function(output_feats,label)
-        else:
-            pass
 
+        elif dataset_output_mode=="text":
+            label,feat = data
+            label,feat = check_tensor(label),check_tensor(feat)
+            output_feats = model.forward_instance(feat)
+            loss_values = loss_function(output_feats,label)
+        elif dataset_output_mode=="visual":
+            label,feat = data
+            label,feat = check_tensor(label),check_tensor(feat)
+            output_feats = model.forward_instance(feat)
+            loss_values = loss_function(output_feats,label)
+        else:
+             raise Exception("dataset output type error:{}".format(dataset_output_mode))
+        
+
+        optimizer.zero_grad()
         loss_values.backward()
         optimizer.step()
         iteration = epoch * batch_len + idx
@@ -78,8 +83,11 @@ def evaluate(model,dataset, dataset_output_mode,save_path='',best_result=False,l
     output_dim = None
 
     vis_mask = True
+    txt_mask = False
     if vis_mask:
         mask_vec ={}
+    if txt_mask:
+        text_mask_vec={}
     for word, name in enumerate(tqdm(index2word, desc="extract feat")):
         if word==0:
             continue
@@ -106,16 +114,24 @@ def evaluate(model,dataset, dataset_output_mode,save_path='',best_result=False,l
                 # print(model.backbone.img_mask.mask_vec.shape)
                 mask_vec[word_name]= model.backbone.img_mask.mask_vec.reshape(-1)
                 # print(mask_vec[word_name].shape)
+            if txt_mask:
+                text_mask_vec[word_name] = model.backbone.txt_mask.mask_vec#.reshape(-1)
 
         elif dataset_output_mode=="visual":
             word_name ,word = dataset.get_vocab_tensor(word)
             output_feats = model.forward_instance(check_tensor(word.unsqueeze(0)))
+            output_dim = output_feats.size(0)
+            feat1_cal[name]=output_feats.detach()
 
-        else:
+        elif dataset_output_mode=="text":
             # word
             word_name, word  = dataset.get_vocab_tensor(word)
             output_feats = model.forward_instance(check_tensor(word))
-
+            output_dim = output_feats.size(0)
+            feat1_cal[name]=output_feats.detach()
+        else:
+             raise Exception("dataset output type error:{}".format(dataset_output_mode))
+        
         if isinstance(output_feats,tuple):
             feat1 = output_feats[0].detach().cpu().squeeze().numpy() # visual
             feat2 = output_feats[1].detach().cpu().squeeze().numpy() # text
@@ -128,11 +144,16 @@ def evaluate(model,dataset, dataset_output_mode,save_path='',best_result=False,l
         vec_path = os.path.join(save_path,"best_{}_rank.txt.vec".format(dataset_output_mode))
     else:
         vec_path =  os.path.join(save_path,"normal_{}_rank.txt.vec".format(dataset_output_mode))
+    
     if extract_all:
         write_dict2vec(output_emb_dict,vec_path, output_dim)
     if vis_mask:
         mask_path =os.path.join(save_path,"mask_weight.pkl")
         write_dict2vec(mask_vec,mask_path,50)
+
+    if txt_mask:
+        text_mask_path =os.path.join(save_path,"text_mask_weight.pkl")
+        write_dict2vec(text_mask_vec,text_mask_path,200)
 
     logger.info("===============clustering===============")
     feats1 = []#v
@@ -149,14 +170,18 @@ def evaluate(model,dataset, dataset_output_mode,save_path='',best_result=False,l
         dis_matrix = dis_matrix.detach().cpu().numpy()
         logger.info("dis_mat:{}".format(dis_matrix[:5,:5]))
         clusters = AgglomerativeClustering(n_clusters=None, affinity='precomputed', linkage='average',
-                                         compute_full_tree=True, distance_threshold=0.2).fit(dis_matrix) 
+                                         compute_full_tree=True, distance_threshold=0.27).fit(dis_matrix) 
     # embeding type
     else:
         for word in synset_vocab:
-            feats1.append(feat1_cal[word])
-        feats1 = torch.cat(feats1)
+            # print(feat1_cal[word].shape)
+            feat = feat1_cal[word]
+            if feat.dim()>1:
+                feat = feat.reshape(-1)
+            feats1.append(feat)
+        feats1 = torch.stack(feats1)
         emb = feats1.detach().cpu().numpy()
-
+        print(emb.shape)
         if cluster_type =="HAC":
             clusters = AgglomerativeClustering(n_clusters=len(synset), affinity='euclidean', linkage='average',
                                          ).fit(normalize(emb))
@@ -192,7 +217,9 @@ def evaluate(model,dataset, dataset_output_mode,save_path='',best_result=False,l
     return metrics
 
 def build_model(model_type,params):
+    logger.info("use {}".format(model_type))
     if model_type=="multimodal":
+        # print(params["model_type"])
         return TrimSyn(img_dim=params['img_dim'],
                        txt_vocab_size=params['txt_vocab_size'],
                        txt_dim=params['txt_dim'],
@@ -200,13 +227,35 @@ def build_model(model_type,params):
                        output_dim=params['output_dim'],
                        op=params['op'],
                        word_embedding=params['word_embedding'],
-                       model_type="withoutTM"
+                       model_type=params["model_type"]
+                       )
+    elif model_type=="visual":
+        # note visual部分有效
+        return SingleSyn(img_dim=params['img_dim'],
+                       txt_vocab_size=params['txt_vocab_size'],
+                       txt_dim=params['txt_dim'],
+                       compact_dim=params['compact_dim'],
+                       output_dim=params['output_dim'],
+                       op=params['op'],
+                       word_embedding=params['word_embedding'],
+                       model_type="visual"
+                       )
+    elif model_type=="text":
+        # note text部分有效
+        return SingleSyn(img_dim=params['img_dim'],
+                       txt_vocab_size=params['txt_vocab_size'],
+                       txt_dim=params['txt_dim'],
+                       compact_dim=params['compact_dim'],
+                       output_dim=params['output_dim'],
+                       op=params['op'],
+                       word_embedding=params['word_embedding'],
+                       model_type="text"
                        )
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', type=str, default="split_0", help="split_n")
+    parser.add_argument('--data', type=str, default="split_0,new_text_data", help="split_n")
     parser.add_argument('--name', type=str, default="", help="model name")
     parser.add_argument('--epochs',type=int,default=50,help="epochs")
     parser.add_argument('--lr',type=float,default=0.0001,help='learning rate')
@@ -217,6 +266,12 @@ def main():
     parser.add_argument('--w2v_type',type=str,default="word",help="use triplet")
     parser.add_argument('--log_dir',type=str,default="logs",help="log dir")
     parser.add_argument('--cluster_type',type=str,default="HAC",help="cluster type :[HAC,matHAC,kmeans,matkmeans]")
+    parser.add_argument('--loss',type=str,default="triplet",help="loss function :[weight,triplet]")
+    parser.add_argument('--model_type',type=str,default="",required=True,help="full,withoutTM,withoutNLA,text,visual,")
+    parser.add_argument('--mu',type=float,default=0.4,help="the weighted factor")
+    parser.add_argument('--compact_dim',type=int,default=200,help="the dimension of compact representation")
+    parser.add_argument("--output_dim",type= int, default=512,help="the dimension of output model")
+
     args = parser.parse_args()
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     EPOCHS = args.epochs
@@ -241,6 +296,7 @@ def main():
 
     word_embed_dict = {
         'wiki_unique_std':'wiki_unique_std.txt.vec',
+        'mge_w2v':'new_text_data/meg_r1.5.vec'
     }
 
     # load_embedding
@@ -262,7 +318,8 @@ def main():
     train_dataset = rank_dataset.BatchRankDataset(options=options,
                                                     word_synset_path=os.path.join(
                                                         word_synset_path, 'train_label.txt'),
-                                                     visual_synset_path='/home/chenguang/workhome/nice_tag_data/wiki_data_feat2048',
+                                                     #visual_synset_path='/home/chenguang/workhome/nice_tag_data/new_wiki_data_feat2048',
+                                                      visual_synset_path='/home/chenguang/workhome/nice_tag_data/wiki_data_feat2048',
                                                      # visual_synset_path='/home/chenguang/workhome/nice_tag_data/nice_images2048',
                                                     output_mode=dataset_output_mode,
                                                     mode='train',
@@ -271,7 +328,8 @@ def main():
     test_dataset = rank_dataset.BatchRankDataset(options=options,
                                                     word_synset_path=os.path.join(
                                                         word_synset_path, 'test_label.txt'),
-                                                     visual_synset_path='/home/chenguang/workhome/nice_tag_data/wiki_data_feat2048',
+                                                     #visual_synset_path='/home/chenguang/workhome/nice_tag_data/new_wiki_data_feat2048',
+                                                      visual_synset_path='/home/chenguang/workhome/nice_tag_data/wiki_data_feat2048',
                                                      # visual_synset_path='/home/chenguang/workhome/nice_tag_data/nice_images2048',
                                                     output_mode=dataset_output_mode,
                                                     mode='test',
@@ -292,18 +350,22 @@ def main():
         "img_dim":2048,
         "txt_vocab_size":vocab_size+1, # pad 0了
         "txt_dim":embed_dim,
-        "compact_dim":200,
-        "output_dim":512,
+        "compact_dim":args.compact_dim,
+        "output_dim":args.output_dim,
         "op":"none", # none会输出两个结果
         "word_embedding":embedding,
+        "model_type":args.model_type
     }
     
     model = build_model(dataset_output_mode, model_params)
     
     optimizer = RAdam(model.parameters(), lr=args.lr,weight_decay=0.1)
     # optimizer = Adam(model.parameters(), lr=args.lr,weight_decay=0.1)
-    loss_function = WeightedTripletLoss(use_hardest=True,weighted_factor=0.4,margin=1.0,device="cuda")
-    #loss_function = TripletLoss(use_hardest=True,margin=1.0,device="cuda").to('cuda')
+    # loss_function = WeightedTripletLoss(use_hardest=True,weighted_factor=0.4,margin=1.0,device="cuda")
+    if args.loss == "weight":
+        loss_function = WeightedTripletLoss(use_hardest=True,weighted_factor=args.mu,margin=1.0,device="cuda")
+    elif args.loss =="triplet":
+        loss_function = TripletLoss(use_hardest=True,margin=1.0,device="cuda").to('cuda')
     #loss_function = ExpTripletLoss(use_hardest=True,margin=1.0,device="cuda").to('cuda')
     
 
@@ -333,9 +395,10 @@ def main():
         writer.add_scalar("test/feng_r", metrics['feng_r'] ,epoch)
         writer.add_scalar("test/feng_f", metrics['feng_f'] ,epoch)
         writer.add_scalar("test/mAP", metrics['map'] ,epoch)
-
-        if old_metric < metrics["ARI"]:
-            old_metric = metrics["ARI"]
+        if True:#日常保存一些模型
+            model.save_model(os.path.join(args.log_dir, 'weight', '{}-rank_model.pth'.format(epoch)))
+        if old_metric < metrics["feng_f"]:
+            old_metric = metrics["feng_f"]
             change_epoch = epoch
             model.save_model(os.path.join(args.log_dir, 'weight', '{}-rank_model.pth'.format(args.name)))
             with open(os.path.join(args.log_dir,"best_result.json"),"w") as fp:

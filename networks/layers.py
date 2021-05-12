@@ -8,6 +8,8 @@ from math import floor
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 from torch.nn import functional as F
 
+from functools import partial
+
 def check_tensor(tensor):
     if torch.cuda.is_available():
         return tensor.to("cuda")
@@ -27,7 +29,34 @@ def init_linear(net, type='xavier_normal'):
         if isinstance(l, nn.Linear):
             init_op[type](l.weight)
 
+class BaseEmbedding(nn.Module):
+    """TextEncoder 
+    """
+    def __init__(self, vocab_size, vocab_dim, *args,**kwargs):
+        super().__init__()
+        self.emb = nn.Embedding(vocab_size, vocab_dim)
 
+    def get_word_emb(self, label):
+        """
+        Args:
+            label(B):是一维的表示
+        """
+        return self.emb(label)
+
+    def load_pretrain_embedding(self, pretrained_emb, embed_fine_tune=False):
+        if pretrained_emb != None:
+            # 读取word embedding
+            
+            pretrained_embedding = pretrained_emb.vectors
+            padding_embedding = np.zeros([1, pretrained_embedding.shape[1]])
+            pretrained_embedding = np.row_stack(
+                [padding_embedding, pretrained_embedding])
+            self.emb.weight.data.copy_(
+                torch.from_numpy(pretrained_embedding))
+            self.emb.weight.requires_grad = embed_fine_tune
+
+    def forward(self,x):
+        return self.emb(x)
 
 class FC(nn.Module):
     def __init__(self):
@@ -40,6 +69,130 @@ class FC(nn.Module):
         for layer in self.children():
             if isinstance(layer, nn.Linear):
                 nn.init.xavier_uniform_(layer.weight)
+
+class ResidulMultipleLayer(nn.Module):
+    """
+    多层残差MLP
+    # TODO设置更容易配置化
+    """
+    def __init__(self,units=[512,256,512]):
+        super().__init__()
+        assert len(units)>=2
+        self.layers = ResidulMultipleLayer.make_layers(units)
+        
+    @staticmethod
+    def make_layers(
+        units,activation_type="relu"):
+        layers = []
+        is_end = len(units)-2
+        for idx,(input_unit,output_unit) in enumerate(zip(units[:-1],units[1:])):
+            layers.append(nn.Linear(input_unit,output_unit))
+            if idx==is_end:
+                break
+            if activation_type=="relu":
+                layers.append(nn.ReLU())
+            else:
+                raise Exception("not statement of {}".format(activation_type))
+        return nn.Sequential(*layers)
+
+    def forward(self,inputs):
+        x = self.layers(inputs)
+        return F.relu(inputs+x)
+
+class MLP(nn.Module):
+    """
+    多层残差MLP
+    # TODO设置更容易配置化
+    """
+    def __init__(self,units=[512,256,512],dropout_rate=0.5):
+        super().__init__()
+        assert len(units)>=2
+        self.layers = ResidulMultipleLayer.make_layers(units)
+        self.dropout = nn.Dropout(dropout_rate)
+
+    def forward(self,inputs):
+        x = self.layers(inputs)
+        return self.dropout(x)
+
+class MultiLevelEmbLayer(nn.Module):
+    def __init__(self,
+                 word_level_emb,
+                 word_vocab_size, word_vocab_dim,
+                 tag_level_emb,
+                 tag_vocab_size, tag_vocab_dim,
+                 pool_type="lse",# avg,max,pool
+                 pool_dim=1,
+                 param_r = 6
+                ):
+        """
+        word_level_emb & tag_level_emb都是矩阵
+        """
+        super().__init__()
+        print(word_vocab_size,word_vocab_dim)
+        print(tag_vocab_size, tag_vocab_dim)
+        self.word_emb = BaseEmbedding(word_vocab_size, word_vocab_dim)
+        self.tag_emb = BaseEmbedding(tag_vocab_size, tag_vocab_dim)
+        if word_level_emb is None:
+            self.word_emb.load_pretrain_embedding(word_level_emb)
+        if tag_level_emb is None:
+            self.tag_emb.load_pretrain_embedding(tag_level_emb)
+        if pool_type=="avg":
+            self.pool_fn = partial(torch.mean,dim=pool_dim)
+        elif pool_type=="lse":
+            self.pool_fn = partial(LSEPool,r=param_r,dim=pool_dim)
+
+
+    def forward(self,words,tag):
+        """
+        Args:
+            words:(BxNx1)
+            tag:(Bx1)
+        Returns:
+            拼接表示 tag_vecs,pool_word_vec
+        """
+        words_vecs = self.word_emb(words)
+        tag_vecs = self.tag_emb(tag)
+        pool_word_vec = self.pool_fn(words_vecs)
+        return torch.cat([tag_vecs,pool_word_vec],dim=1) 
+
+
+
+class GateComponentV2(nn.Module):
+    """
+    更规范的gate
+    """
+    def __init__(self, img_dim, txt_dim,compact_dim, op='add'):
+        
+        super().__init__()
+        self.wv = nn.Linear(img_dim, compact_dim)
+        self.wt = nn.Linear(txt_dim, compact_dim)
+        self.wv_hat = nn.Linear(img_dim, compact_dim)  # 应可以用同一层
+        self.wt_hat = nn.Linear(img_dim, compact_dim)
+        self.op = op
+
+    def forward(self, img, word):
+        '''
+        
+        Args:
+            img(BXD):图像表示
+            word(BXD):文本表示
+        '''
+        v = self.wv(img)
+        t = self.wt(word)
+        v_hat = self.wv_hat(v)
+        t_hat = self.wt_hat(t)
+        g = torch.sigmoid(v_hat + t_hat)
+        self.gate_vec = g
+        if self.op == 'add':
+            return torch.add(torch.mul(g, v), torch.mul((1 - g), t))
+        elif self.op =="none":
+            return torch.mul(g, v), torch.mul((1 - g), t)
+        elif self.op =="concat":
+            return torch.cat([torch.mul(g, v), torch.mul((1 - g), t)],dim=1)
+        else:
+            raise Exception("No op:{}".format(self.op))
+
+#=====================
 
 class GateComponent(FC):
     """
@@ -58,6 +211,7 @@ class GateComponent(FC):
         self.wt_hat = nn.Linear(out_word_dim, out_word_dim)
         self.op = op
         self.initilize()
+        self.gate_vec = None
 
     def forward(self, img, word):
         '''
@@ -72,6 +226,7 @@ class GateComponent(FC):
         v_hat = self.wv_hat(v)
         t_hat = self.wt_hat(t)
         g = torch.sigmoid(v_hat + t_hat)
+        self.gate_vec = g
         if self.op == 'add':
             return torch.add(torch.mul(g, v), torch.mul((1 - g), t))
         elif self.op =="none":
@@ -81,6 +236,7 @@ class GateComponent(FC):
         else:
             raise Exception("No op:{}".format(self.op))
 
+#==================pooling ====================
 
 class AvgPoolNet(nn.Module):
     """
@@ -93,6 +249,15 @@ class AvgPoolNet(nn.Module):
     def forward(self,feat):
         trans_feat = self.trans(feat)
         return torch.mean(trans_feat,dim=1)
+
+def LSEPool(tensors,r,dim=1):
+    """
+    log sum exp
+    """
+    tensor_exp = tensors.mul(r).exp()
+    tensor_sum = tensor_exp.sum(dim=dim,keepdim=True)
+    lse_tensor = torch.log(tensor_sum)/r
+    return lse_tensor.squeeze(dim=1)
 
 
 #======================Non local attention=======================================
@@ -136,13 +301,13 @@ class _NonLocalBlockND(nn.Module):
                         kernel_size=1, stride=1, padding=0),
                 bn(self.in_channels)
             )
-            nn.init.constant_(self.W[1].weight, 0)
-            nn.init.constant_(self.W[1].bias, 0)
+            # nn.init.constant_(self.W[1].weight, 0)
+            # nn.init.constant_(self.W[1].bias, 0)
         else:
             self.W = conv_nd(in_channels=self.inter_channels, out_channels=self.in_channels,
                              kernel_size=1, stride=1, padding=0)
-            nn.init.constant_(self.W.weight, 0)
-            nn.init.constant_(self.W.bias, 0)
+            # nn.init.constant_(self.W.weight, 0)
+            # nn.init.constant_(self.W.bias, 0)
 
         self.theta = conv_nd(in_channels=self.in_channels, out_channels=self.inter_channels,
                              kernel_size=1, stride=1, padding=0)
@@ -205,4 +370,6 @@ class NONLocalBlock3D(_NonLocalBlockND):
 
 
 if __name__ == '__main__':
-    main()
+    mlp = ResidulMultipleLayer([512,256,256,512])
+    data = torch.rand(2,512)
+    print(mlp(data).shape)

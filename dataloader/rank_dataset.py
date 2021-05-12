@@ -213,7 +213,7 @@ class BatchRankDataset(Dataset):
         for line in tqdm(self.synset, desc='loading word synset...'):
             words = sorted([self.word2index[word]for word in line])
             pairs = list(permutations(words,2))
-            self.pair_data.extend(pairs)
+            self.pair_data.extend(pairs) 
             self.positive_sets.append(words)
             self.vocab.extend(words)
 
@@ -317,6 +317,7 @@ class BatchRankDataset(Dataset):
             return torch.tensor(pairs_label).long(), torch.tensor(pairs).long()
 
 
+# collate_function：用于stacking数据
 def text_collate_fn(data):
     labels,text = zip(*data)
     labels = torch.cat(labels,dim=0)
@@ -337,8 +338,137 @@ def multimodal_collate_fn(data):
     return labels,text,visual
 
 
+class BatchExtendRankDataset(Dataset):
+    def __init__(self,
+                 options,
+                 word_synset_path,
+                 visual_synset_path,
+                 output_mode="visual",
+                 mode='train',
+                 use_npy=False,
+                 max_words_num=7):
+        self.index2tag =options["index2tag"]
+        self.tag2index = options["tag2index"]
+        self.index2word = options["index2word"]
+        self.word2index = options["word2index"]
+        self.vocab = []  # 词表
+        self.positive_sets = []
+        self.word_synset_path = word_synset_path
+        self.visual_synset_path = visual_synset_path
+        self.output_mode = output_mode
+        self.visual_dict = None  # 设置为cache 形式
+        self.visual_dict_path = None
+        self.index2label = {} # 映射标签用
+        self.pair_data = [] # pair data
+        self.mode = mode
+        self.max_words_num = max_words_num
+        self.load_word_synset(self.word_synset_path)
+
+        if self.output_mode == 'visual' or self.output_mode == 'multimodal':
+            self.load_visual_synset(self.visual_synset_path, use_npy)
+
+    def load_word_synset(self, synset_path):
+        """
+        读取文本同义词集合,c
+
+        :synset_path: the path of synset
+        :type synset_path: str
+        :return :None
+        :rtype: None
+        """
+        self.synset = read_synset(synset_path)
+        if self.mode=="train":
+            random.shuffle(self.synset)
+        for line in tqdm(self.synset, desc='loading word synset...'):
+            words = sorted([self.tag2index[word]for word in line])
+            pairs = list(permutations(words,2))
+            self.pair_data.extend(pairs)#拿到成对数据
+            self.positive_sets.append(words)#ground truth
+            self.vocab.extend(words) # idx
+        # 随机放一些原来的
+            
+        self.vocab = sorted(self.vocab)  
+
+        for idx,sets in enumerate(self.positive_sets):
+            for widx in sets:
+                self.index2label[widx]=idx
+
+
+    def load_visual_synset(self, synset_path, use_npy=False):
+
+        if use_npy:
+            self.visual_dict = dict()
+            self.visual_dict_path = dict()
+            # 直接读取npy文件到内存
+            for word in tqdm(os.listdir(synset_path)):
+                full_word_path = os.path.join(synset_path, word)
+                feat = np.load(full_word_path)
+                word = word.split('(')[0].replace(' ', '_').split('.npy')[0]
+                if word in self.index2tag:
+                    self.visual_dict_path[word] = full_word_path
+                    self.visual_dict[word] = feat
+            print('use npy feat')
+        else:
+            self.visual_dict_path = dict()
+            for word in tqdm(os.listdir(synset_path)):
+                full_word_path = os.path.join(synset_path, word)
+                word = word.split('(')[0].replace(' ', '_').split('.npy')[0]
+                if word in self.index2tag:
+                    self.visual_dict_path[word] = full_word_path
+
+    def get_visual_feat(self, word_idx):
+        """返回图像特征
+        """
+        word = self.index2tag[word_idx]
+        if self.visual_dict is not None:
+            return self.visual_dict[word]
+
+        elif self.visual_dict_path is not None:
+
+            return np.load(self.visual_dict_path[word])
+        else:
+
+            raise Exception(
+                "visual_dict_path&visual_dict is None,please initite those")
+
+    def __len__(self):
+        return len(self.pair_data)
+
+    def get_vocab_tensor(self,word):
+        """ get one word feat 
+        """
+        # word = self.vocab[index]
+        word_name = self.index2tag[word] 
+        visual_feat = self.get_visual_feat(word)
+        return word_name,torch.tensor(word).long(),torch.tensor(visual_feat).float()
+
+
+
+    def __getitem__(self, index):
+        tag_pairs = self.pair_data[index]
+        pairs_label = [self.index2label[p] for p in tag_pairs]
+        def convert2word(tag,max_len=self.max_words_num):
+            words = tag.split("_")
+            indexs = [self.word2index[word] for word in words]
+            output = [0]*max_len
+            for idx,val in enumerate(indexs):
+                indexs[idx ] = val 
+            return output
+        words = [self.index2tag[p] for p in tag_pairs]
+        word_pairs = [convert2word(word,self.max_words_num) for word in words]
+
+        pair_query_emb = [self.get_visual_feat(query)[np.newaxis,:] for  query in tag_pairs ] 
+        pair_query_emb = np.vstack(pair_query_emb)
+        return torch.tensor(pairs_label).long(), torch.tensor(tag_pairs).long(),torch.tensor(word_pairs).long(),torch.from_numpy(pair_query_emb)
+
+        
+def extend_collate_fn(data):
+    pass
+
+
 
 if __name__ == '__main__':
+
     options = {}
     options["dataset"] = 'NICE_fast'
     options["data_format"] = 'set'
@@ -354,7 +484,7 @@ if __name__ == '__main__':
                              word_synset_path='/home/chenguang/workhome/nice_tag_data/nice_synonym_data_v2/wiki_std_synset/train_label.txt',
                              # "/home/chenguang/workhome/nice_tag_data/synset_images_feat_pack_7",synset_images_np100_trans,
                              visual_synset_path='/home/chenguang/workhome/nice_tag_data/wiki_data_feat2048',
-                             output_mode="multimodal",
+                             output_mode="visual",
                              mode='train',
                              use_npy=False
                              )
